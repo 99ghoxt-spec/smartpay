@@ -1,0 +1,5 @@
+{
+  "name": "SmartLedger",
+  "description": "一个智能记账APP，支持自动分类和详细的收支统计。",
+  "requestFramePermissions": ["microphone"]
+}

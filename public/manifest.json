@@ -1,0 +1,22 @@
+{
+  "name": "SmartLedger",
+  "short_name": "SmartLedger",
+  "description": "智能记账，理清每一分钱的去向",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "https://picsum.photos/seed/ledger/192/192",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://picsum.photos/seed/ledger/512/512",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
