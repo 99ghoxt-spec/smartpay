@@ -29,8 +29,10 @@ export async function classifyTransaction(input: string, secret: string): Promis
   const keys = [
     isUserProvidingKey ? secret : null,
     process.env.GEMINI_API_KEY,
+    process.env.VITE_GEMINI_API_KEY,
     (import.meta as any).env?.VITE_GEMINI_API_KEY,
-    (window as any)._env_?.VITE_GEMINI_API_KEY, // 额外的兼容性备份
+    (import.meta as any).env?.GEMINI_API_KEY,
+    (window as any)._env_?.VITE_GEMINI_API_KEY,
   ].filter(Boolean).map(k => k?.trim()) as string[];
 
   console.log("Detected AI Keys count:", keys.length);
@@ -48,7 +50,7 @@ export async function classifyTransaction(input: string, secret: string): Promis
       try {
         const ai = new GoogleGenAI({ apiKey: key });
         const response = await ai.models.generateContent({
-          model: "gemini-3-flash-preview",
+          model: "gemini-2.0-flash",
           contents: [{ parts: [{ text: `你是一个专业的记账助手。请解析以下支付或收入信息，提取金额、分类和简短描述。
           
           注意：
