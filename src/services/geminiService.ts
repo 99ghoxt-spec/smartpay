@@ -1,5 +1,4 @@
-
-import { GoogleGenAI, Type } from "@google/genai";
+import { CATEGORIES } from "../types";
 
 export interface ClassifiedTransaction {
   amount: number;
@@ -7,108 +6,125 @@ export interface ClassifiedTransaction {
   category: string;
   description: string;
   _isFallback?: boolean;
-  _isSmartFallback?: boolean;
 }
 
-const CATEGORIES = [
-  "餐饮美食", "交通出行", "购物消费", "休闲娱乐", "医疗保健", 
-  "生活日用", "住房缴费", "工资收入", "理财收益", "其他"
+// 阿里云百炼 API 配置
+const DASHSCOPE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
+
+// 优先级模型列表
+const QWEN_MODELS = [
+  "qwen2.5-32b-instruct", // 对应用户说的 qwen3-32b (目前最新为 2.5)
+  "qwen-max",
+  "qwen2.5-7b-instruct",  // 对应用户说的 qwen3-8b
+  "qwen-plus"
 ];
 
 const APP_SECRET = "cxmyydsjjz";
 
 export async function classifyTransaction(input: string, secret: string): Promise<ClassifiedTransaction | null> {
-  // 1. 准备有效的 Key：优先使用用户提供的 Key，其次是环境变量
-  const isUserProvidingKey = typeof secret === 'string' && secret.startsWith("AIzaSy");
+  if (!input) return null;
+
+  const isUserProvidingKey = typeof secret === 'string' && secret.startsWith("sk-");
   
   // 如果既不是正确的暗号，也不是有效的 API Key，则拒绝访问
   if (!isUserProvidingKey && secret !== APP_SECRET) {
     throw new Error('INVALID_SECRET');
   }
 
+  // 获取 API Key
   const keys = [
     isUserProvidingKey ? secret : null,
-    process.env.GEMINI_API_KEY,
-    process.env.VITE_GEMINI_API_KEY,
-    (import.meta as any).env?.VITE_GEMINI_API_KEY,
-    (import.meta as any).env?.GEMINI_API_KEY,
-    (window as any)._env_?.VITE_GEMINI_API_KEY,
+    (import.meta as any).env?.VITE_DASHSCOPE_API_KEY,
+    (window as any)._env_?.VITE_DASHSCOPE_API_KEY,
   ].filter(Boolean).map(k => k?.trim()) as string[];
 
-  console.log("Detected AI Keys count:", keys.length);
+  console.log("--- Qwen Recognition Start ---");
+  console.log("Detected DashScope Keys count:", keys.length);
+
   if (keys.length === 0) {
-    console.error("No API Key detected! Please check Cloudflare Environment Variables.");
-  }
+    console.error("No DashScope API Key detected!");
+    // 如果没有 Key，直接进入兜底
+  } else {
+    const apiKey = keys[0];
 
-  if (!input) return null;
-
-  // 尝试使用 AI 识别
-  if (keys.length > 0) {
-    for (const key of keys) {
-      if (key.includes("your_api_key_here") || key.includes("TODO") || key.startsWith("MY_GEMIN")) continue;
-
+    // 遍历模型进行尝试
+    for (const modelName of QWEN_MODELS) {
       try {
-        const ai = new GoogleGenAI({ apiKey: key });
-        const response = await ai.models.generateContent({
-          model: "gemini-2.0-flash",
-          contents: [{ parts: [{ text: `你是一个专业的记账助手。请解析以下支付或收入信息，提取金额、分类和简短描述。
-          
-          注意：
-          1. “描述”字段必须是消费的主体（例如：买鞋子就是"鞋子"，在食堂吃饭就是"食堂"，在麦当劳吃饭就是"麦当劳"，买可乐就是“可乐”，打车就是“打车”）。
-          2. “分类”必须从以下选项中选择: ${CATEGORIES.join(", ")}。
-          3. “金额”必须是识别出的数字。
-          
-          输入信息: "${input}"
-          
-          请严格按照 JSON 格式返回，包含 "金额" (数字), "分类" (字符串), "描述" (字符串), "类型" (只能是 "income" 或 "expense") 字段。` }] }],
-          config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: {
-                "金额": { type: Type.NUMBER },
-                "分类": { type: Type.STRING },
-                "描述": { type: Type.STRING },
-                "类型": { type: Type.STRING, enum: ["income", "expense"] }
+        console.log(`Trying model: ${modelName}...`);
+        
+        const response = await fetch(DASHSCOPE_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: modelName,
+            messages: [
+              {
+                role: "system",
+                content: `你是一个专业的记账助手。请解析用户输入的支付或收入信息，提取金额、分类和简短描述。
+                
+                注意：
+                1. “描述”字段必须是消费的主体（例如：买鞋子就是"鞋子"，在食堂吃饭就是"食堂"，在麦当劳吃饭就是"麦当劳"，买可乐就是“可乐”，打车就是“打车”）。
+                2. “分类”必须从以下选项中选择: ${CATEGORIES.join(", ")}。
+                3. “金额”必须是识别出的数字。
+                4. “类型”只能是 "income" 或 "expense"。
+                
+                请严格返回 JSON 格式，例如: {"金额": 50, "分类": "餐饮美食", "描述": "麦当劳", "类型": "expense"}`
               },
-              required: ["金额", "分类", "描述", "类型"]
-            }
-          }
+              {
+                role: "user",
+                content: input
+              }
+            ],
+            response_format: { type: "json_object" }
+          })
         });
 
-        if (response.text) {
-          const result = JSON.parse(response.text);
-          return {
-            amount: result["金额"],
-            category: result["分类"],
-            description: result["描述"],
-            type: result["类型"]
-          } as ClassifiedTransaction;
+        if (!response.ok) {
+          const errorData = await response.json();
+          // 如果是限额错误 (429)，则尝试下一个模型
+          if (response.status === 429 || errorData.error?.code === "DataLimitControl") {
+            console.warn(`Model ${modelName} rate limited, trying next...`);
+            continue;
+          }
+          throw new Error(errorData.error?.message || "API_ERROR");
         }
+
+        const data = await response.json();
+        const content = data.choices[0].message.content;
+        const result = JSON.parse(content);
+
+        return {
+          amount: result["金额"] || 0,
+          category: result["分类"] || "其他",
+          description: result["描述"] || input.slice(0, 20),
+          type: result["类型"] || "expense"
+        };
+
       } catch (error: any) {
-        console.error("Gemini API Error Details:", error);
-        if (error.message?.includes('Failed to fetch') || error.message?.includes('Load failed')) {
+        console.error(`Error with model ${modelName}:`, error.message);
+        if (error.message === 'Failed to fetch') {
           throw new Error('NETWORK_ERROR');
         }
-        console.warn("Gemini attempt failed:", error.message);
+        // 如果是最后一个模型也失败了，或者不是限额错误，则抛出
+        if (modelName === QWEN_MODELS[QWEN_MODELS.length - 1]) {
+          break;
+        }
+        continue; 
       }
     }
   }
 
-  // 2. 极简兜底逻辑
+  // 所有模型都失败后的兜底逻辑
+  console.warn("AI classification failed, using fallback logic");
   const amountMatch = input.match(/(\d+(\.\d+)?)/);
-  const amount = amountMatch ? parseFloat(amountMatch[0]) : 0;
-  
   return {
-    amount,
-    type: "expense",
+    amount: amountMatch ? parseFloat(amountMatch[0]) : 0,
     category: "其他",
-    description: input.substring(0, 20),
+    description: input.slice(0, 20),
+    type: "expense",
     _isFallback: true
   };
-}
-
-export async function checkServerHealth(): Promise<any> {
-  // Since we are moving to client-side, we can just return a mock success
-  return { status: "ok", hasApiKey: !!process.env.GEMINI_API_KEY };
 }
