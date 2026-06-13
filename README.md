@@ -1,20 +1,32 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+<p align="center">
+  <img src="./screenshot.jpg" width="380" alt="SmartLedge 智能记账主界面"/>
+</p>
 
-# Run and deploy your AI Studio app
+<h1 align="center">SmartLedge 3 - 智能记账</h1>
 
-This contains everything you need to run your app locally.
+<p align="center">
+  🚀 <b>SmartLedge 3</b> 是一款深度集成 AI 能力的个人智能记账与财务管理系统。<br>
+  通过简洁直观的界面与大语言模型交互，帮助用户实现全自动/半自动的消费意图识别、智能归类与多维度账单统计。
+</p>
 
-View your app in AI Studio: https://ai.studio/apps/e1a86898-8361-4a2e-a61d-718de069e63a
+<p align="center">
+  <a href="https://ai.studio/apps/e1a86898-8361-4a2e-a61d-718de069e63a">🌐 在 AI Studio 中查看应用</a>
+</p>
 
-## Run Locally
+---
 
-**Prerequisites:**  Node.js
+## 📖 项目介绍 (Project Introduction)
 
+**SmartLedge 3** 旨在解决传统记账软件“手动输入繁琐、分类标签死板、数据缺乏深度分析”的痛点。结合大模型能力，本项目不仅提供了极其流畅的现代化 Web 交互，更将 AI 能力无缝注入到了日常记账的每个核心环节。
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### ✨ 核心亮点
+* **智能流水识别**：支持通过自然语言输入（如：“下午去拍了证件照花了36元”、“跟同学喝霸王茶姬34元”）自动解析出金额、消费类型、商家及时间，实现秒级智能记账。
+* **精准动态归类**：AI 自动根据消费场景（如交通出行、餐饮美食、其它等）进行智能化标签匹配，拒绝繁琐的手动选择。
+* **清晰财务看板**：直观展示月度总支出、总收入以及动态结余。支持“按日期”与“按分类”双向聚合，消费流向一目了然。
+* **极致交互体验**：专为移动端和小程序级 Web 体验优化的拟物化卡片设计，搭配高级柔和的深紫、浅蓝调视觉风格与直观的底部动态操控区（+号核心交互）。
+
+---
+
+## 🏗️ 技术架构图 (Technical Architecture)
+
+应用采用前后端分离与轻量化大模型驱动的架构，确保极速的用户响应与安全的隐私数据处理：
